@@ -152,7 +152,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <script>
 var D=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 var MON=['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
-var DAYORDER=[6,0,1,2,3,4,5];
+var DAYORDER=[0,1,2,3,4,5,6];
 var PER=[null,[480,525],[525,570],[585,630],[630,675],[690,735],[735,780]];
 var COLORS=['#0f6b5c','#7a3e9d','#c2410c','#1d4ed8','#a16207','#be185d'];
 var KEY='schedule-v2',S=null,weekOff=0,ed=null,scope='w',uref=null;
@@ -165,7 +165,7 @@ S=seed();
 function p2(n){return (n<10?'0':'')+n}
 function sod(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
 function addD(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n)}
-function wstart(d){var x=sod(d);return addD(x,-((x.getDay()+1)%7))}
+function wstart(d){var x=sod(d);return addD(x,-x.getDay())}
 function wkey(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
 function dlab(d){return d.getDate()+' '+MON[d.getMonth()]}
 function f(m){var h=Math.floor(m/60),n=m%60,p=h>=12?'م':'ص';h=h%12||12;return h+':'+p2(n)+' '+p}
@@ -352,7 +352,7 @@ function fold(line){var enc=new TextEncoder(),out='',cur='',bytes=0;
  for(var ch of line){var b=enc.encode(ch).length;if(bytes+b>73){out+=cur+'\r\n ';cur='';bytes=1}cur+=ch;bytes+=b}
  return out+cur}
 function ldt(d,m){return d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'T'+p2(Math.floor(m/60))+p2(m%60)+'00'}
-function dateOfKey(k,day){var a=k.split('-');return addD(new Date(+a[0],+a[1]-1,+a[2]),(day+1)%7)}
+function dateOfKey(k,day){var a=k.split('-');return addD(new Date(+a[0],+a[1]-1,+a[2]),day)}
 function buildICS(){
  var L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Schedule App//AR//','CALSCALE:GREGORIAN','X-WR-CALNAME:جدول حصصي','X-WR-TIMEZONE:Asia/Baghdad',
   'BEGIN:VTIMEZONE','TZID:Asia/Baghdad','BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:+0300','TZOFFSETTO:+0300','TZNAME:+03','END:STANDARD','END:VTIMEZONE'];
