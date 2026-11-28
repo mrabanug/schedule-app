@@ -4,11 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="color-scheme" content="light dark">
 <title>سجل طلاب الرياضيات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#1f3a68;--light:#dfe7f3;--bg:#f3f5f9;--line:#d5dbe6;--muted:#6b7487;--red:#c0392b}
+:root{--navy:#1f3a68;--light:#dfe7f3;--bg:#f3f5f9;--line:#d5dbe6;--muted:#6b7487;--red:#c0392b;
+/* حركة بأسلوب أبل: spring مخمّد حرجياً بدون ارتداد كافتراضي، وارتداد خفيف فقط بعد سحب/دفعة */
+--spring:linear(0,0.0507,0.1616,0.2918,0.4196,0.5347,0.6331,0.7144,0.78,0.832,0.8727,0.9041,0.9281,0.9463,0.9601,0.9705,0.9782,0.984,0.9882,0.9914,0.9937,0.9954,0.9967,0.9976,1);
+--spring-bounce:linear(0,0.0383,0.1302,0.2488,0.3755,0.4982,0.6097,0.7064,0.7871,0.8521,0.9028,0.9411,0.969,0.9884,1.0013,1.0091,1.0134,1.015,1.015,1.0139,1.0122,1.0103,1.0084,1.0067,1.0051,1.0038,1.0027,1.0018,1.0011,1.0006,1);
+--dur:.4s}
+@supports not (transition-timing-function:linear(0,1)){:root{--spring:cubic-bezier(.2,.8,.2,1);--spring-bounce:cubic-bezier(.3,1.25,.5,1)}}
 *{box-sizing:border-box}
 body{margin:0;font-family:Cairo,system-ui,sans-serif;background:var(--bg);color:#16202e;font-size:15px;-webkit-tap-highlight-color:transparent}
 button,input,select{font:inherit}
@@ -17,8 +28,12 @@ header.top h1{font-size:17px;margin:0;font-weight:800;flex:1}
 #sync{font-size:12px;background:#ffffff22;padding:3px 10px;border-radius:20px;white-space:nowrap}
 #sync.ok{background:#27ae6044}#sync.error{background:#e74c3c66}#sync.pending{background:#f1c40f44}
 nav{display:flex;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:4}
-nav button{flex:1;white-space:nowrap;font-size:14px;border:0;background:none;padding:11px 4px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
-nav button.on{color:var(--navy);border-color:var(--navy)}
+nav button{flex:1;white-space:nowrap;font-size:14px;border:0;background:none;padding:11px 4px;font-weight:700;color:var(--muted);cursor:pointer;transition:color .2s}
+nav button.on{color:var(--navy)}
+/* مؤشر واحد ينزلق بين التبويبات بدل خط يختفي ويظهر */
+#tabbar{position:absolute;bottom:0;left:0;height:3px;width:0;background:var(--navy);border-radius:3px 3px 0 0;transition:transform var(--dur) var(--spring),width var(--dur) var(--spring)}
+#view.enter{animation:viewIn .22s ease-out}
+@keyframes viewIn{from{opacity:0}to{opacity:1}}
 main{max-width:900px;margin:0 auto;padding:14px 12px 80px}
 .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .box h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
@@ -35,6 +50,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
 .chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 14px;white-space:nowrap;cursor:pointer;font-weight:600}
 .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip{transition:background-color .2s,color .2s,border-color .2s,transform .32s var(--spring)}
 .btn{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:9px 16px;font-weight:700;cursor:pointer;display:inline-block}
 .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
 .btn.danger{background:var(--red)}
@@ -48,10 +64,14 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 .b{--c:#888;font-size:11.5px;font-weight:700;color:var(--c);background:color-mix(in srgb,var(--c) 12%,#fff);border:1px solid color-mix(in srgb,var(--c) 35%,#fff);border-radius:20px;padding:1px 8px;white-space:nowrap}
 .fin{min-width:46px;text-align:center;font-weight:800;font-size:18px;color:var(--navy);background:var(--light);border-radius:10px;padding:6px 4px}
 .fin.low{color:var(--red);background:#fbe5e2}
-#modal{position:fixed;inset:0;background:#0007;z-index:20;display:none}
-#modal.show{display:block}
-.sheet{position:absolute;inset:0;overflow-y:auto;background:var(--bg);max-width:900px;margin:0 auto;padding-bottom:60px}
-.sh-head{background:var(--navy);color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:2}
+/* ملف الطالب: لوح يصعد من الأسفل ويرجع لنفس المكان، ويُسحب للأسفل للإغلاق */
+#modal{position:fixed;inset:0;background:rgba(10,18,32,0);z-index:20;visibility:hidden;pointer-events:none;transition:background-color .3s ease,visibility 0s linear .45s}
+#modal.show{visibility:visible;pointer-events:auto;background:rgba(10,18,32,.45);transition:background-color .3s ease}
+.sheet{position:absolute;inset:max(10px,env(safe-area-inset-top)) 0 0;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);max-width:900px;margin:0 auto;padding-bottom:60px;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px #0003;transform:translateY(105%);transition:transform var(--dur) var(--spring);will-change:transform}
+#modal.show .sheet{transform:none}
+.sheet.drag{transition:none}
+.sh-head{background:var(--navy);color:#fff;padding:16px 14px 12px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:2;border-radius:16px 16px 0 0;touch-action:none;cursor:grab}
+.sh-head::before{content:'';position:absolute;top:6px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:5px;background:#ffffff59}
 .sh-head h2{margin:0;font-size:18px}
 .sh-head .muted{color:#c9d4ea}
 .sheet .box{margin:12px}
@@ -83,8 +103,26 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 .tbl td.l{text-align:right;white-space:nowrap;padding:6px 8px}
 .tbl th{white-space:nowrap}
 .tblwrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120px);background:#16202e;color:#fff;padding:10px 18px;border-radius:12px;z-index:50;transition:.25s;font-weight:600;max-width:90vw;text-align:center}
-#toast.show{transform:translateX(-50%) translateY(0)}
+#toast{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(120px) scale(.96);opacity:0;background:#16202e;color:#fff;padding:10px 18px;border-radius:12px;z-index:50;transition:transform var(--dur) var(--spring),opacity .2s;font-weight:600;max-width:90vw;text-align:center;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0) scale(1);opacity:1}
+
+/* استجابة فورية للمس: ينضغط فوراً، ويرجع بـ spring */
+.btn,.chip,.tbtn,.rb,.icon,.card,nav button,.link{transition-property:transform,background-color,color,border-color;transition-duration:.32s;transition-timing-function:var(--spring)}
+.btn:active,.chip:active,.tbtn:active,.rb:active,.icon:active,nav button:active{transform:scale(.95);transition-duration:.06s}
+.card:active{transform:scale(.985);transition-duration:.06s}
+@media (hover:hover) and (pointer:fine){.card:hover{border-color:#b9c3d4}.btn:hover{filter:brightness(1.08)}}
+.rb.pop{animation:pop .45s var(--spring-bounce)}
+@keyframes pop{from{transform:scale(.88)}to{transform:scale(1)}}
+.cnt.bump b{animation:bump .5s var(--spring-bounce)}
+@keyframes bump{from{transform:scale(1.35)}to{transform:scale(1)}}
+
+@media (prefers-reduced-motion:reduce){
+  :root{--dur:.01s}
+  *,*::before,*::after{animation-duration:.01s!important}
+  .btn:active,.chip:active,.tbtn:active,.rb:active,.icon:active,nav button:active,.card:active{transform:none}
+  .sheet{transform:none;opacity:0;transition:opacity .2s}
+  #modal.show .sheet{opacity:1}
+}
 .empty{text-align:center;padding:40px 16px}
 .typerow{display:flex;gap:6px;flex-wrap:wrap}
 .hint{background:#fff8e1;border:1px solid #f3dd8e;border-radius:10px;padding:10px;font-size:13px;line-height:1.8}
@@ -102,6 +140,109 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
   h4{color:var(--navy);margin:12px 0 6px}
   .sign{display:flex;justify-content:space-between;margin-top:40px;font-weight:700;color:var(--navy)}
 }
+
+/* ================= تصميم بأسلوب أبل (الشاشة فقط — الطباعة بقيت كما هي) ================= */
+@media screen{
+:root{--a-bg:#f5f5f7;--a-card:#fff;--a-text:#1d1d1f;--a-sec:#6e6e73;--a-sep:rgba(60,60,67,.18);--a-fill:rgba(118,118,128,.12);--a-blue:#0071e3;--a-red:#ff3b30;--a-glass:rgba(245,245,247,.78);--a-thumb:#fff;--a-tint:255,255,255}
+@media (prefers-color-scheme:dark){:root{--a-bg:#000;--a-card:#1c1c1e;--a-text:#f5f5f7;--a-sec:#98989d;--a-sep:rgba(84,84,88,.6);--a-fill:rgba(118,118,128,.24);--a-blue:#0a84ff;--a-red:#ff453a;--a-glass:rgba(22,22,24,.72);--a-thumb:#636366;--a-tint:28,28,30}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:system-ui,-apple-system,"SF Arabic","SF Pro Text","Segoe UI",Cairo,sans-serif;background:var(--a-bg);color:var(--a-text);font-size:16px;letter-spacing:-.01em;min-height:100dvh;-webkit-font-smoothing:antialiased;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+/* شريط علوي زجاجي + عنوان كبير */
+header.top{background:var(--a-glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);color:var(--a-text);height:calc(54px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 18px 0}
+header.top h1{font-size:24px;font-weight:800;letter-spacing:-.02em}
+#sync{background:var(--a-fill);color:var(--a-sec);font-size:12px;font-weight:600;padding:4px 10px}
+#sync.ok{background:rgba(52,199,89,.16);color:#248a3d}#sync.error{background:rgba(255,59,48,.14);color:var(--a-red)}#sync.pending{background:rgba(255,149,0,.16);color:#c93400}
+/* التبويبات: Segmented Control */
+nav{top:calc(54px + env(safe-area-inset-top));background:var(--a-glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--a-sep);padding:4px 14px 10px}
+nav::before{content:'';position:absolute;top:4px;bottom:10px;left:12px;right:12px;background:var(--a-fill);border-radius:10px}
+nav button{position:relative;z-index:1;font-size:14px;font-weight:600;color:var(--a-text);padding:7px 2px;min-height:34px;border-radius:8px;opacity:.7}
+nav button.on{color:var(--a-text);opacity:1}
+#tabbar{top:6px;bottom:12px;height:auto;background:var(--a-thumb);border-radius:8px;box-shadow:0 3px 8px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04)}
+main{max-width:1000px;padding:18px 16px calc(90px + env(safe-area-inset-bottom))}
+/* البطاقات والمجموعات */
+.box{background:var(--a-card);border:0;border-radius:16px;padding:16px;margin-bottom:16px}
+.box h3{color:var(--a-text);font-size:17px;font-weight:700;letter-spacing:-.01em}
+.muted{color:var(--a-sec)}
+label{color:var(--a-sec);font-size:13px}
+/* الحقول: خط 16px حتى الآيفون ما يكبّر الشاشة */
+input,select,textarea{font-size:16px!important;background:var(--a-fill)!important;border:0!important;border-radius:10px!important;color:var(--a-text);min-height:42px;-webkit-appearance:none;appearance:none}
+input[type=checkbox]{min-height:0;-webkit-appearance:auto;appearance:auto;width:18px;height:18px;accent-color:var(--a-blue)}
+select{padding-left:30px!important;background-image:linear-gradient(45deg,transparent 50%,var(--a-sec) 50%),linear-gradient(135deg,var(--a-sec) 50%,transparent 50%)!important;background-position:14px 52%,19px 52%!important;background-size:5px 5px!important;background-repeat:no-repeat!important}
+input:focus,select:focus,textarea:focus{outline:3px solid color-mix(in srgb,var(--a-blue) 35%,transparent);outline-offset:0}
+#q{background:var(--a-fill)!important;border-radius:12px!important;padding:11px 14px!important}
+/* الفلاتر */
+.chips{gap:8px;padding:12px 0 4px}
+.chip{background:var(--a-fill);border:0;color:var(--a-text);padding:7px 15px;font-weight:600;font-size:14px;min-height:34px}
+.chip.on{background:var(--a-blue);color:#fff}
+/* الأزرار */
+.btn{background:var(--a-blue);border-radius:980px;padding:10px 20px;font-weight:600;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.ghost{background:color-mix(in srgb,var(--a-blue) 12%,transparent);color:var(--a-blue);border:0}
+.btn.danger{background:var(--a-red)}
+.btn.sm{padding:7px 14px;font-size:14px;min-height:34px}
+.link{color:var(--a-blue);text-decoration:none;font-weight:600;min-height:36px}
+.link.danger{color:var(--a-red)}
+/* قائمة الطلاب: Inset Grouped مثل إعدادات الآيفون */
+#list{background:var(--a-card);border-radius:16px;overflow:hidden}
+#list:empty{display:none}
+#list>.box,#list>p{margin:0}
+.card{background:var(--a-card);border:0;border-radius:0;margin:0;padding:12px 16px;min-height:60px;position:relative}
+.card+.card::before{content:'';position:absolute;top:0;right:16px;left:0;border-top:.5px solid var(--a-sep)}
+.card::after{content:'';flex:none;width:8px;height:8px;border-left:2px solid #c7c7cc;border-bottom:2px solid #c7c7cc;transform:rotate(45deg);margin-right:2px}
+.card:active{background:var(--a-fill)}
+.nm{font-weight:600;font-size:16px}
+.fin{background:var(--a-fill);color:var(--a-text);border-radius:10px;font-size:17px;font-weight:700}
+.fin.low{background:color-mix(in srgb,var(--a-red) 14%,transparent);color:var(--a-red)}
+.b{background:color-mix(in srgb,var(--c) 14%,transparent);border:0;font-weight:600;padding:2px 8px}
+/* ملف الطالب */
+.sheet{background:var(--a-bg);border-radius:14px 14px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.18)}
+.sh-head{background:var(--a-glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);color:var(--a-text);border-radius:14px 14px 0 0;border-bottom:.5px solid var(--a-sep);padding:18px 16px 12px}
+.sh-head::before{background:color-mix(in srgb,var(--a-sec) 45%,transparent)}
+.sh-head h2{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.sh-head .muted{color:var(--a-sec)}
+.icon{background:var(--a-fill);color:var(--a-sec);width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:700}
+.box .icon{background:transparent;width:36px;height:36px}
+.sheet .box{margin:16px}
+.tgrid{gap:8px}
+.tbtn{border:0;background:color-mix(in srgb,var(--c) 12%,transparent);border-radius:12px;font-weight:600;min-height:44px}
+.cnt{background:color-mix(in srgb,var(--c) 10%,transparent);border-radius:12px;padding:10px 6px}
+.cnt b{font-size:24px;font-weight:700}
+.cnt span{color:var(--a-sec)}
+.exam{border:0;background:var(--a-bg);border-radius:12px;padding:12px}
+.gcell .val{background:var(--a-fill);border-radius:10px}
+.gcell.f .val{background:color-mix(in srgb,var(--a-blue) 14%,transparent);color:var(--a-blue)}
+.note{border-bottom:.5px solid var(--a-sep);padding:10px 0}
+/* التسجيل اليومي */
+.rrow{background:var(--a-card);border:0;border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.rn{font-weight:600}
+.rbtns{gap:6px}
+.rb{border:0;background:color-mix(in srgb,var(--c) 11%,transparent);border-radius:980px;padding:7px 12px;font-weight:600;font-size:14px;min-height:36px}
+.rb.on{background:var(--c);color:#fff}
+/* الجداول */
+.tblwrap{border:0;border-radius:16px;background:var(--a-card)}
+.tbl{background:var(--a-card);font-size:14px}
+.tbl th{background:var(--a-card);color:var(--a-sec);font-weight:600;font-size:12.5px;border-bottom:.5px solid var(--a-sep);padding:10px 6px}
+.tbl td{border:0;border-bottom:.5px solid var(--a-sep);padding:10px 6px}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tr[data-act]:active td{background:var(--a-fill)}
+.hint{background:rgba(255,204,0,.14);border:0;border-radius:12px;color:var(--a-text)}
+#toast{background:rgba(var(--a-tint),.86);color:var(--a-text);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:15px}
+textarea{padding:10px 12px!important}
+.fin:empty{visibility:hidden}
+/* الوضع الليلي: تفتيح ألوان الحالات حتى تنقرأ على الخلفية السوداء */
+@media (prefers-color-scheme:dark){
+  .tbtn,.b,.rb:not(.on),.cnt b{color:color-mix(in srgb,var(--c) 55%,#fff)!important}
+  .tbtn,.cnt,.rb:not(.on){background:color-mix(in srgb,var(--c) 22%,transparent)}
+  .exam{background:#2c2c2e}
+}
+/* الشاشات الكبيرة */
+@media (min-width:760px){
+  header.top{padding-left:max(24px,calc((100% - 1000px)/2 + 16px));padding-right:max(24px,calc((100% - 1000px)/2 + 16px))}
+  nav{padding-left:max(14px,calc((100% - 600px)/2));padding-right:max(14px,calc((100% - 600px)/2))}
+  nav::before{left:max(12px,calc((100% - 600px)/2 - 2px));right:max(12px,calc((100% - 600px)/2 - 2px))}
+  .sheet{top:40px;border-radius:14px;bottom:20px;max-width:760px}
+  .sh-head{border-radius:14px 14px 0 0}
+}
+}
 </style>
 </head>
 <body>
@@ -111,6 +252,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
   <button data-act="go" data-v="register">تسجيل يومي</button>
   <button data-act="go" data-v="reports">التقارير</button>
   <button data-act="go" data-v="settings">الإعدادات</button>
+  <span id="tabbar"></span>
 </nav>
 <main id="view"></main>
 <div id="modal"></div>
@@ -120,7 +262,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 <script>window.APP_CONFIG={key:'math_mahmoud',title:'سجل طلاب الرياضيات',subject:'الرياضيات',teacher:'محمود علي',mode:'single',repo:'math-data',path:'math.json',grade:'الثالث'};</script>
 <script>
 /* ===== أدوات عامة ===== */
-const APP_VERSION='2026-11-28.5';
+const APP_VERSION='2026-11-28.7';
 const CFG=Object.assign({key:'qawafi',title:'سجل طلاب الحاسوب',subject:'الحاسوب',teacher:'محمد محمود',mode:'full',repo:'students-data',path:'data.json',grade:''},window.APP_CONFIG||{});
 const SINGLE=CFG.mode==='single';
 const LS=CFG.key==='qawafi'?'qawafi_students_db_v1':CFG.key+'_db_v1', LSG=CFG.key==='qawafi'?'qawafi_github_v1':CFG.key+'_github_v1';
@@ -230,8 +372,15 @@ async function ghSync(silent){
 /* ===== واجهة ===== */
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
 function chips(act,opts,cur){return `<div class="chips">${opts.map(([v,l])=>`<button class="chip ${v===cur?'on':''}" data-act="${act}" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>`}
+function moveTabbar(){
+  const b=document.querySelector('nav button.on'),bar=$('#tabbar');if(!b||!bar)return;
+  const w=b.offsetWidth;   /* مقبض الـ Segmented Control يغطي التبويب كامل */
+  bar.style.width=w+'px';bar.style.transform=`translateX(${b.offsetLeft}px)`;
+}
+addEventListener('resize',()=>{const bar=$('#tabbar');bar.style.transition='none';moveTabbar();bar.offsetWidth;bar.style.transition=''});
 function render(){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+  moveTabbar();
   if(!DB&&S.view!=='settings'){vEmpty();return}
   ({students:vStudents,register:vRegister,reports:vReports,settings:vSettings})[S.view]();
 }
@@ -272,8 +421,51 @@ function renderList(){
 }
 
 /* --- ملف الطالب --- */
-function openStudent(id){curId=id;renderProfile(true);$('#modal').classList.add('show');document.body.style.overflow='hidden'}
-function closeModal(){$('#modal').classList.remove('show');$('#modal').innerHTML='';document.body.style.overflow='';curId=null;render()}
+let closeTimer=null;
+function openStudent(id){
+  const m=$('#modal'),reopen=m.classList.contains('show')||closeTimer;
+  clearTimeout(closeTimer);closeTimer=null;   /* قابل للمقاطعة: فتح أثناء الإغلاق يكمل من مكانه */
+  curId=id;
+  if(reopen&&$('.sheet')){renderProfile(true)}
+  else{renderProfile(true);m.offsetHeight}   /* نثبّت الوضع المغلق أولاً حتى يصعد اللوح */
+  m.style.backgroundColor='';m.classList.add('show');document.body.style.overflow='hidden'
+}
+function closeModal(){
+  const m=$('#modal');if(!m.classList.contains('show'))return;
+  const sh=$('.sheet');if(sh){sh.classList.remove('drag');sh.style.transform=''}
+  m.style.backgroundColor='';m.classList.remove('show');document.body.style.overflow='';curId=null;render();
+  clearTimeout(closeTimer);closeTimer=setTimeout(()=>{closeTimer=null;if(!m.classList.contains('show'))m.innerHTML=''},450);
+}
+/* سحب ملف الطالب للأسفل للإغلاق — يتبع الإصبع، ويحسب سرعة الدفعة */
+(function(){
+  let y0=0,dy=0,sh=null,pts=[],id=null;
+  const m=$('#modal');
+  m.addEventListener('pointerdown',e=>{
+    const head=e.target.closest('.sh-head');if(!head||e.target.closest('button,input,a,select'))return;
+    sh=$('.sheet');if(!sh)return;id=e.pointerId;head.setPointerCapture(id);
+    y0=e.clientY;dy=0;pts=[[e.timeStamp,e.clientY]];sh.classList.add('drag');
+  });
+  m.addEventListener('pointermove',e=>{
+    if(!sh||e.pointerId!==id)return;
+    const raw=e.clientY-y0;dy=raw>0?raw:raw*.15;   /* مقاومة مطاطية للأعلى */
+    sh.style.transform=`translateY(${dy}px)`;
+    m.style.backgroundColor=`rgba(10,18,32,${.45*Math.max(0,1-dy/(sh.offsetHeight||800))})`;
+    pts.push([e.timeStamp,e.clientY]);if(pts.length>5)pts.shift();
+  });
+  const end=e=>{
+    if(!sh||e.pointerId!==id)return;
+    const a=pts[0],b=pts[pts.length-1],v=b&&a&&b[0]>a[0]?(b[1]-a[1])/(b[0]-a[0]):0; /* px/ms */
+    const s=sh;sh=null;id=null;s.classList.remove('drag');
+    if(dy>140||(v>.5&&dy>10)){closeModal()}
+    else{
+      s.style.transition='transform .45s var(--spring-bounce)';   /* ارتداد خفيف لأن هناك دفعة سبقته */
+      s.style.transform='';m.style.backgroundColor='';
+      setTimeout(()=>{s.style.transition=''},460);
+    }
+  };
+  m.addEventListener('pointerup',end);m.addEventListener('pointercancel',end);
+  m.addEventListener('click',e=>{if(e.target===m)closeModal()});
+})();
 function inp(k,l,v,ex,max){return `<div class="gcell"><label>${l}</label><input type="number" inputmode="numeric" min="0" max="${max}" data-chg="score" data-k="${k}" data-ex="${ex}" value="${v??''}"></div>`}
 function gradeEditor(s,ex){
   const sc=s.scores?.[ex.id]||{},c=calc(sc)||{},st=sc.status||'';
@@ -433,7 +625,7 @@ document.addEventListener('click',async e=>{
   if(el.tagName==='A')e.preventDefault();
   const s=curId?stu(curId):null;
   switch(a){
-   case 'go':S.view=v;render();window.scrollTo(0,0);break;
+   case 'go':{if(S.view===v)break;S.view=v;render();window.scrollTo(0,0);const vw=$('#view');vw.classList.remove('enter');vw.offsetWidth;vw.classList.add('enter');break}
    case 'fgrade':S.grade=v;S.section='all';vStudents();break;
    case 'fsec':S.section=v;vStudents();break;
    case 'rgrade':S.regGrade=v;S.regSection=null;vRegister();break;
@@ -447,7 +639,8 @@ document.addEventListener('click',async e=>{
    case 'addnote':{
      const text=$('#nText').value.trim(),date=$('#nDate').value||today();
      s.notes.push({id:uid(),date,type:el.dataset.t,text});persist();$('#nText').value='';
-     toast('تمت الإضافة: '+T(el.dataset.t).label);renderProfile();break}
+     toast('تمت الإضافة: '+T(el.dataset.t).label);renderProfile();
+     const ci=DB.types.findIndex(t=>t.id===el.dataset.t);document.querySelectorAll('.sheet .cnt')[ci]?.classList.add('bump');break}
    case 'delnote':if(confirm('حذف هذه الملاحظة؟')){s.notes=s.notes.filter(n=>n.id!==el.dataset.n);persist();renderProfile()}break;
    case 'autofill':{
      const sc=s.scores[el.dataset.ex]||(s.scores[el.dataset.ex]={status:''});const m=MAP[num(sc.theory)];
@@ -465,7 +658,7 @@ document.addEventListener('click',async e=>{
    case 'toggle':{
      const st=stu(el.dataset.id),t=el.dataset.t;const i=st.notes.findIndex(n=>n.date===S.regDate&&n.type===t);
      if(i>=0)st.notes.splice(i,1);else st.notes.push({id:uid(),date:S.regDate,type:t,text:''});
-     persist();el.classList.toggle('on',i<0);
+     persist();el.classList.toggle('on',i<0);el.classList.remove('pop');if(i<0){el.offsetWidth;el.classList.add('pop')}
      const arr=filtered(S.regGrade,S.regSection,'');$('#rsum').textContent=`${arr.length} طالب · الغائبون: ${arr.filter(x=>x.notes.some(n=>n.date===S.regDate&&n.type==='absent')).length}`;break}
    case 'ghsave':{
      GH={owner:$('#gOwner').value.trim().replace(/^@/,''),repo:$('#gRepo').value.trim(),branch:$('#gBranch').value.trim()||'main',path:$('#gPath').value.trim()||CFG.path,token:$('#gToken').value.trim()};
@@ -527,6 +720,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 /* ===== تشغيل ===== */
 $('#apptitle').textContent=CFG.title;
+document.fonts?.ready.then(()=>dispatchEvent(new Event('resize')));
 load();if(!DB&&SINGLE){DB=ensure({students:[]});localStorage.setItem(LS,JSON.stringify(DB))}render();ghSync(true);
 /* تحديث تلقائي: إذا نُشرت نسخة أحدث من الصفحة يعاد تحميلها */
 async function checkUpdate(){try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/APP_VERSION='([^']+)'/);if(m&&m[1]!==APP_VERSION&&!curId){toast('يوجد تحديث… جاري التحميل');setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1])+location.hash),800)}}catch(e){}}
