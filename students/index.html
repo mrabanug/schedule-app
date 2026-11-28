@@ -188,7 +188,10 @@ const b64e=s=>{const b=new TextEncoder().encode(s);let bin='';for(let i=0;i<b.le
 const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')),c=>c.charCodeAt(0)));
 async function ghFetch(){
   const r=await fetch(ghURL()+'?ref='+encodeURIComponent(GH.branch||'main')+'&_='+Date.now(),{headers:hdr(),cache:'no-store'});
-  if(r.status===404){ghSha=null;return null}
+  if(r.status===404){
+    const rr=await fetch(`https://api.github.com/repos/${encodeURIComponent(GH.owner)}/${encodeURIComponent(GH.repo)}`,{headers:hdr(),cache:'no-store'});
+    if(!rr.ok)throw new Error('لا أستطيع الوصول إلى المستودع '+GH.owner+'/'+GH.repo+' — تأكد من كتابة اسم الحساب والمستودع، وأن التوكن مسموح له بمستودع students-data وصلاحية Contents: Read and write');
+    ghSha=null;return null}
   if(!r.ok)throw new Error(r.status===401?'التوكن غير صحيح':'خطأ GitHub '+r.status);
   const j=await r.json();ghSha=j.sha;
   if(!j.content)throw new Error('الملف كبير جداً للقراءة');
@@ -427,7 +430,7 @@ document.addEventListener('click',async e=>{
      persist();el.classList.toggle('on',i<0);
      const arr=filtered(S.regGrade,S.regSection,'');$('#rsum').textContent=`${arr.length} طالب · الغائبون: ${arr.filter(x=>x.notes.some(n=>n.date===S.regDate&&n.type==='absent')).length}`;break}
    case 'ghsave':{
-     GH={owner:$('#gOwner').value.trim(),repo:$('#gRepo').value.trim(),branch:$('#gBranch').value.trim()||'main',path:$('#gPath').value.trim()||'data.json',token:$('#gToken').value.trim()};
+     GH={owner:$('#gOwner').value.trim().replace(/^@/,''),repo:$('#gRepo').value.trim(),branch:$('#gBranch').value.trim()||'main',path:$('#gPath').value.trim()||'data.json',token:$('#gToken').value.trim()};
      if(!ghOK()){toast('أكمل اسم الحساب والمستودع والتوكن');break}
      localStorage.setItem(LSG,JSON.stringify(GH));
      try{setSync('pending');const r=await ghFetch();
