@@ -119,7 +119,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 
 <script>
 /* ===== أدوات عامة ===== */
-const APP_VERSION='2026-11-28.4';
+const APP_VERSION='2026-11-28.5';
 const CFG=Object.assign({key:'qawafi',title:'سجل طلاب الحاسوب',subject:'الحاسوب',teacher:'محمد محمود',mode:'full',repo:'students-data',path:'data.json',grade:''},window.APP_CONFIG||{});
 const SINGLE=CFG.mode==='single';
 const LS=CFG.key==='qawafi'?'qawafi_students_db_v1':CFG.key+'_db_v1', LSG=CFG.key==='qawafi'?'qawafi_github_v1':CFG.key+'_github_v1';
@@ -528,8 +528,21 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 $('#apptitle').textContent=CFG.title;
 load();if(!DB&&SINGLE){DB=ensure({students:[]});localStorage.setItem(LS,JSON.stringify(DB))}render();ghSync(true);
 /* تحديث تلقائي: إذا نُشرت نسخة أحدث من الصفحة يعاد تحميلها */
-async function checkUpdate(){try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/APP_VERSION='([^']+)'/);if(m&&m[1]!==APP_VERSION&&!curId){toast('يوجد تحديث… جاري التحميل');setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1])),800)}}catch(e){}}
-checkUpdate();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate()});
+async function checkUpdate(){try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/APP_VERSION='([^']+)'/);if(m&&m[1]!==APP_VERSION&&!curId){toast('يوجد تحديث… جاري التحميل');setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1])+location.hash),800)}}catch(e){}}
+/* استيراد من رابط: البيانات داخل الرابط بعد # ولا تُرسل إلى أي خادم */
+async function linkImport(){
+  const h=location.hash;if(!h.startsWith('#d='))return false;
+  try{
+    const b=atob(h.slice(3).replace(/-/g,'+').replace(/_/g,'/'));const u=Uint8Array.from(b,c=>c.charCodeAt(0));
+    const txt=await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    const d=JSON.parse(txt);if(!Array.isArray(d.students))throw 0;
+    history.replaceState(null,'',location.pathname);
+    if(DB&&DB.students.length&&!confirm('سيتم استبدال البيانات الحالية ببيانات الرابط ('+d.students.length+' طالب). متابعة؟'))return true;
+    DB=ensure(d);persist();S.view='students';render();toast('تم تحميل '+DB.students.length+' طالب ✓');
+  }catch(e){toast('تعذر قراءة بيانات الرابط')}
+  return true;
+}
+linkImport().then(done=>{if(!done)checkUpdate()});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate()});
 </script>
 </body>
 </html>
