@@ -148,7 +148,7 @@ const GRADE_ORDER=['الأول','الثاني','الثالث'];
 
 let DB=null, GH={}, ghSha=null, saveTimer=null, curId=null;
 try{GH=JSON.parse(localStorage.getItem(LSG)||'{}')}catch(e){GH={}}
-let S={view:'students',grade:'all',section:'all',q:'',sort:'name',regGrade:null,regSection:null,regDate:today(),repGrade:null,repSection:'all',repExam:null};
+let S={view:'students',grade:'all',section:'all',q:'',sort:'name',regGrade:null,regSection:null,regDate:today(),repGrade:null,repSection:'all',repExam:null,repMode:'grades',noteView:'type'};
 
 /* ===== البيانات ===== */
 function ensure(d){
@@ -291,7 +291,11 @@ function renderProfile(top){
     <div class="tgrid">${DB.types.map(t=>`<button class="tbtn" style="--c:${t.color}" data-act="addnote" data-t="${t.id}">+ ${esc(t.label)}</button>`).join('')}</div></section>
   <section class="box"><h3>الملخص</h3><div class="cgrid">${DB.types.map(t=>`<div class="cnt" style="--c:${t.color}"><b>${c[t.id]||0}</b><span>${esc(t.label)}</span></div>`).join('')}</div></section>
   <section class="box"><h3>الدرجات</h3>${DB.exams.map(ex=>gradeEditor(s,ex)).join('')}</section>
-  <section class="box"><h3>سجل الملاحظات (${notes.length})</h3>${notes.map(n=>`<div class="note"><span class="b" style="--c:${T(n.type).color}">${esc(T(n.type).label)}</span><span class="muted sm">${fmtD(n.date)}</span><div class="grow">${esc(n.text)}</div><button class="icon" data-act="delnote" data-n="${n.id}" aria-label="حذف">🗑</button></div>`).join('')||'<p class="muted">لا توجد ملاحظات بعد</p>'}</section>
+  <section class="box"><h3>تفاصيل الحالات (${notes.length})</h3>
+  ${notes.length?chips('nview',[['type','حسب نوع الحالة'],['date','حسب التاريخ']],S.noteView):''}
+  ${!notes.length?'<p class="muted">لا توجد ملاحظات بعد</p>':S.noteView==='type'?notesByType(s).map(([t,list])=>`<div class="exam" style="border-color:color-mix(in srgb,${t.color} 40%,#fff)"><div class="row between" style="margin:0 0 4px"><b style="color:${t.color}">${esc(t.label)}</b><span class="b" style="--c:${t.color}">${list.length} ${list.length===1?'مرة':'مرات'}</span></div>
+     ${list.map((n,i)=>`<div class="note"><span class="muted sm" style="min-width:18px">${i+1}.</span><span class="sm" style="white-space:nowrap">${esc(dayName(n.date))} ${fmtD(n.date)}</span><div class="grow">${n.text?esc(n.text):'<span class="muted sm">بدون تفاصيل</span>'}</div><button class="icon" data-act="delnote" data-n="${n.id}" aria-label="حذف">🗑</button></div>`).join('')}</div>`).join('')
+   :notes.map(n=>`<div class="note"><span class="b" style="--c:${T(n.type).color}">${esc(T(n.type).label)}</span><span class="muted sm">${esc(dayName(n.date))} ${fmtD(n.date)}</span><div class="grow">${esc(n.text)}</div><button class="icon" data-act="delnote" data-n="${n.id}" aria-label="حذف">🗑</button></div>`).join('')}</section>
   <section class="box"><h3>بيانات الطالب</h3>
     <label>الاسم</label><input id="eName" value="${esc(s.name)}">
     <div class="row"><div class="grow"><label>الصف</label><input id="eGrade" value="${esc(s.grade)}" list="glist"></div><div class="grow"><label>الشعبة</label><input id="eSec" value="${esc(s.section)}"></div></div>
@@ -316,24 +320,45 @@ function vRegister(){
 }
 
 /* --- التقارير --- */
-function vReports(){
+const dayName=d=>{try{return new Date(d+'T12:00:00').toLocaleDateString('ar-IQ',{weekday:'long'})}catch(e){return ''}};
+function notesByType(s){const g={};for(const n of [...s.notes].sort((a,b)=>a.date.localeCompare(b.date)))(g[n.type]=g[n.type]||[]).push(n);return DB.types.filter(t=>g[t.id]).map(t=>[t,g[t.id]]).concat(Object.keys(g).filter(k=>!DB.types.find(t=>t.id===k)).map(k=>[T(k),g[k]]))}
+function repData(){
   const gl=gradesList();if(!gl.includes(S.repGrade))S.repGrade=gl[0];
   const secs=sectionsOf(S.repGrade);if(S.repSection!=='all'&&!secs.includes(S.repSection))S.repSection='all';
   if(!DB.exams.find(e=>e.id===S.repExam))S.repExam=lastExam().id;
   const arr=filtered(S.repGrade,S.repSection,'').sort((a,b)=>coll.compare(a.section,b.section)||byName(a,b));
-  const nums=arr.map(s=>finOf(s,S.repExam)).filter(f=>typeof f==='number');
-  const avg=nums.length?(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1):'-';
-  const pass=nums.filter(f=>f>=50).length;
-  $('#view').innerHTML=`${chips('pgrade',gl.map(g=>[g,'الصف '+g]),S.repGrade)}${chips('psec',[['all','كل الشعب'],...secs.map(x=>[x,'شعبة '+x])],S.repSection)}
-  <div class="row between"><select id="pExam">${DB.exams.map(e=>`<option value="${e.id}" ${e.id===S.repExam?'selected':''}>${esc(e.name)}</option>`).join('')}</select><button class="btn sm" data-act="printrep">🖨 طباعة</button></div>
-  <div class="row muted sm">العدد: ${arr.length} · المعدل: ${avg} · الناجحون (50 فأكثر): ${pass} · الراسبون: ${nums.length-pass}</div>
-  <div class="tblwrap">${repTable(arr)}</div>`;
-  $('#pExam').onchange=e=>{S.repExam=e.target.value;vReports()};
+  return{gl,secs,arr};
 }
-function repTable(arr,print){
-  const types=DB.types;
-  return `<table class="${print?'pt':'tbl'}"><tr><th>ت</th><th>اسم الطالب</th>${S.repSection==='all'?'<th>الشعبة</th>':''}<th>النهائية</th>${types.map(t=>`<th>${esc(t.short)}</th>`).join('')}<th>سلبيات</th></tr>
-  ${arr.map((s,i)=>{const c=counts(s);return `<tr${print?'':` data-act="open" data-id="${s.id}" style="cursor:pointer"`}><td>${i+1}</td><td class="l">${esc(s.name)}</td>${S.repSection==='all'?`<td>${esc(s.section)}</td>`:''}<td><b>${esc(finOf(s,S.repExam))}</b></td>${types.map(t=>`<td>${c[t.id]||''}</td>`).join('')}<td><b>${negTotal(s)||''}</b></td></tr>`}).join('')}</table>`;
+function vReports(){
+  const{gl,secs,arr}=repData();
+  let head=`${chips('pmode',[['grades','📊 الدرجات'],['details','📋 المتابعة والسلوك']],S.repMode)}
+  ${chips('pgrade',gl.map(g=>[g,'الصف '+g]),S.repGrade)}${chips('psec',[['all','كل الشعب'],...secs.map(x=>[x,'شعبة '+x])],S.repSection)}`;
+  let body='';
+  if(S.repMode==='grades'){
+    const nums=arr.map(s=>finOf(s,S.repExam)).filter(f=>typeof f==='number');
+    const avg=nums.length?(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1):'-';const pass=nums.filter(f=>f>=50).length;
+    body=`<div class="row between"><select id="pExam">${DB.exams.map(e=>`<option value="${e.id}" ${e.id===S.repExam?'selected':''}>${esc(e.name)}</option>`).join('')}</select><button class="btn sm" data-act="printrep">🖨 طباعة</button></div>
+    <div class="row muted sm">العدد: ${arr.length} · المعدل: ${avg} · الناجحون (50 فأكثر): ${pass} · الراسبون: ${nums.length-pass}</div>
+    <div class="tblwrap">${gradesTable(arr)}</div>`;
+  }else{
+    const tot={};arr.forEach(s=>s.notes.forEach(n=>tot[n.type]=(tot[n.type]||0)+1));
+    body=`<div class="row between"><span class="muted sm">اضغط على أي طالب لرؤية تفاصيل حالاته</span><button class="btn sm" data-act="printrep">🖨 طباعة</button></div>
+    <div class="cgrid" style="margin-bottom:10px">${DB.types.map(t=>`<div class="cnt" style="--c:${t.color}"><b>${tot[t.id]||0}</b><span>${esc(t.label)}</span></div>`).join('')}</div>
+    <div class="tblwrap">${detailsTable(arr)}</div>`;
+  }
+  $('#view').innerHTML=head+body;
+  if($('#pExam'))$('#pExam').onchange=e=>{S.repExam=e.target.value;vReports()};
+}
+function gradesTable(arr,print){
+  const sec=S.repSection==='all';
+  return `<table class="${print?'pt':'tbl'}"><tr><th>ت</th><th>اسم الطالب</th>${sec?'<th>الشعبة</th>':''}<th>اليومي<br>(100)</th><th>النظري<br>(60)</th><th>العملي<br>(40)</th><th>الامتحان<br>(100)</th><th>النهائية<br>(100)</th></tr>
+  ${arr.map((s,i)=>{const r=calc(s.scores?.[S.repExam])||{};const low=typeof r.f==='number'&&r.f<50;return `<tr${print?'':` data-act="open" data-id="${s.id}" style="cursor:pointer"`}><td>${i+1}</td><td class="l">${esc(s.name)}</td>${sec?`<td>${esc(s.section)}</td>`:''}<td>${esc(r.d??'')}</td><td>${esc(r.t??'')}</td><td>${esc(r.p??'')}</td><td>${esc(r.m??'')}</td><td style="${low?'color:#c0392b;':''}font-weight:800">${esc(r.f??'')}</td></tr>`}).join('')}</table>`;
+}
+function detailsTable(arr,print){
+  const sec=S.repSection==='all',types=DB.types;
+  return `<table class="${print?'pt':'tbl'}"><tr><th>ت</th><th>اسم الطالب</th>${sec?'<th>الشعبة</th>':''}${types.map(t=>`<th>${esc(t.short)}</th>`).join('')}<th>مجموع السلبيات</th><th>آخر ملاحظة</th></tr>
+  ${arr.map((s,i)=>{const c=counts(s),neg=negTotal(s);const last=[...s.notes].sort((a,b)=>b.date.localeCompare(a.date))[0];
+   return `<tr${print?'':` data-act="open" data-id="${s.id}" style="cursor:pointer"`}><td>${i+1}</td><td class="l">${esc(s.name)}</td>${sec?`<td>${esc(s.section)}</td>`:''}${types.map(t=>`<td style="${c[t.id]?`color:${t.color};font-weight:800`:''}">${c[t.id]||''}</td>`).join('')}<td style="font-weight:800;${neg>=3?'color:#c0392b':''}">${neg||''}</td><td class="sm" style="white-space:nowrap">${last?esc(T(last.type).short)+' · '+fmtD(last.date):''}</td></tr>`}).join('')}</table>`;
 }
 
 /* --- الطباعة --- */
@@ -345,14 +370,14 @@ function printStudent(s){
   <h4>الدرجات</h4><table class="pt"><tr><th>الامتحان</th><th>اليومي (100)</th><th>النظري (60)</th><th>العملي (40)</th><th>الامتحان (100)</th><th>النهائية (100)</th></tr>
   ${DB.exams.map(ex=>{const r=calc(s.scores?.[ex.id])||{};return `<tr><td class="l">${esc(ex.name)}</td><td>${esc(r.d??'')}</td><td>${esc(r.t??'')}</td><td>${esc(r.p??'')}</td><td>${esc(r.m??'')}</td><td><b>${esc(r.f??'')}</b></td></tr>`}).join('')}</table>
   <h4>ملخص الملاحظات</h4><table class="pt"><tr>${DB.types.map(t=>`<th>${esc(t.label)}</th>`).join('')}</tr><tr>${DB.types.map(t=>`<td>${c[t.id]||0}</td>`).join('')}</tr></table>
-  <h4>تفاصيل الملاحظات</h4>${notes.length?`<table class="pt"><tr><th>ت</th><th>التاريخ</th><th>النوع</th><th>التفاصيل</th></tr>${notes.map((n,i)=>`<tr><td>${i+1}</td><td>${fmtD(n.date)}</td><td>${esc(T(n.type).label)}</td><td class="l">${esc(n.text)}</td></tr>`).join('')}</table>`:'<p>لا توجد ملاحظات.</p>'}
+  <h4>تفاصيل الحالات</h4>${notes.length?notesByType(s).map(([t,list])=>`<table class="pt"><tr><th colspan="3" style="text-align:right">${esc(t.label)} — ${list.length} ${list.length===1?'مرة':'مرات'}</th></tr>${list.map((n,i)=>`<tr><td style="width:30px">${i+1}</td><td style="width:150px">${esc(dayName(n.date))} ${fmtD(n.date)}</td><td class="l">${esc(n.text)}</td></tr>`).join('')}</table>`).join(''):'<p>لا توجد ملاحظات.</p>'}
   <div class="sign"><span>توقيع ولي الأمر: ..................</span><span>مدرس المادة: ${esc(DB.settings.teacher)}</span></div>`;
   setTimeout(()=>window.print(),50);
 }
 function printReport(){
-  const arr=filtered(S.repGrade,S.repSection,'').sort((a,b)=>coll.compare(a.section,b.section)||byName(a,b));
+  const{arr}=repData();
   const ex=DB.exams.find(e=>e.id===S.repExam);
-  $('#print').innerHTML=printHead(`الصف ${S.repGrade} متوسط${S.repSection==='all'?'':' / شعبة ('+S.repSection+')'} – ${ex.name}`)+repTable(arr,true)+`<div class="sign"><span></span><span>مدرس المادة: ${esc(DB.settings.teacher)}</span></div>`;
+  $('#print').innerHTML=printHead(`الصف ${S.repGrade} متوسط${S.repSection==='all'?'':' / شعبة ('+S.repSection+')'} – ${S.repMode==='grades'?ex.name:'المتابعة والسلوك'}`)+(S.repMode==='grades'?gradesTable(arr,true):detailsTable(arr,true))+`<div class="sign"><span></span><span>مدرس المادة: ${esc(DB.settings.teacher)}</span></div>`;
   setTimeout(()=>window.print(),50);
 }
 
@@ -402,6 +427,8 @@ document.addEventListener('click',async e=>{
    case 'fsec':S.section=v;vStudents();break;
    case 'rgrade':S.regGrade=v;S.regSection=null;vRegister();break;
    case 'rsec':S.regSection=v;vRegister();break;
+   case 'pmode':S.repMode=v;vReports();break;
+   case 'nview':S.noteView=v;renderProfile();break;
    case 'pgrade':S.repGrade=v;S.repSection='all';vReports();break;
    case 'psec':S.repSection=v;vReports();break;
    case 'open':openStudent(el.dataset.id);break;
