@@ -119,6 +119,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 
 <script>
 /* ===== أدوات عامة ===== */
+const APP_VERSION='2026-11-28.3';
 const LS='qawafi_students_db_v1', LSG='qawafi_github_v1';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -508,6 +509,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 /* ===== تشغيل ===== */
 load();render();ghSync(true);
+/* تحديث تلقائي: إذا نُشرت نسخة أحدث من الصفحة يعاد تحميلها */
+async function checkUpdate(){try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/APP_VERSION='([^']+)'/);if(m&&m[1]!==APP_VERSION&&!curId){toast('يوجد تحديث… جاري التحميل');setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1])),800)}}catch(e){}}
+checkUpdate();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate()});
 </script>
 </body>
 </html>
