@@ -105,7 +105,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 </style>
 </head>
 <body>
-<header class="top"><h1>سجل طلاب الحاسوب</h1><span id="sync">محلي فقط</span></header>
+<header class="top"><h1 id="apptitle">سجل الطلاب</h1><span id="sync">محلي فقط</span></header>
 <nav>
   <button data-act="go" data-v="students">الطلاب</button>
   <button data-act="go" data-v="register">تسجيل يومي</button>
@@ -119,8 +119,11 @@ label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 
 <script>
 /* ===== أدوات عامة ===== */
-const APP_VERSION='2026-11-28.3';
-const LS='qawafi_students_db_v1', LSG='qawafi_github_v1';
+const APP_VERSION='2026-11-28.4';
+const CFG=Object.assign({key:'qawafi',title:'سجل طلاب الحاسوب',subject:'الحاسوب',teacher:'محمد محمود',mode:'full',repo:'students-data',path:'data.json',grade:''},window.APP_CONFIG||{});
+const SINGLE=CFG.mode==='single';
+const LS=CFG.key==='qawafi'?'qawafi_students_db_v1':CFG.key+'_db_v1', LSG=CFG.key==='qawafi'?'qawafi_github_v1':CFG.key+'_github_v1';
+document.title=CFG.title;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const coll=new Intl.Collator('ar');
@@ -154,7 +157,7 @@ let S={view:'students',grade:'all',section:'all',q:'',sort:'name',regGrade:null,
 /* ===== البيانات ===== */
 function ensure(d){
   d.version=d.version||1;
-  d.settings=Object.assign({school:'متوسطة القوافي الأهلية للبنين',subject:'الحاسوب',teacher:'محمد محمود'},d.settings||{});
+  d.settings=Object.assign({school:'متوسطة القوافي الأهلية للبنين',subject:CFG.subject,teacher:CFG.teacher},d.settings||{});
   if(!Array.isArray(d.types)||!d.types.length) d.types=JSON.parse(JSON.stringify(DEFAULT_TYPES));
   if(!Array.isArray(d.exams)||!d.exams.length) d.exams=[{id:'m1',name:'امتحان الشهر الأول'}];
   d.students=(d.students||[]).map(s=>Object.assign({notes:[],scores:{}},s,{id:s.id||uid()}));
@@ -174,6 +177,7 @@ function calc(sc){
   if(!sc)return null;
   if(sc.status==='غ')return{d:'غ',t:'غ',p:'غ',m:'غ',f:'غ'};
   if(sc.status==='نقل')return{d:'نقل',t:'نقل',p:'نقل',m:'نقل',f:sc.final??''};
+  if(SINGLE){const f=num(sc.final);return{d:'',t:'',p:'',m:'',f:f??''}}
   const d=num(sc.daily),t=num(sc.theory),p=num(sc.practical);
   if(d===null||t===null||p===null)return{d:d??'',t:t??'',p:p??'',m:'',f:''};
   const m=t+p;return{d,t,p,m,f:Math.floor((d+m)/2+0.5)};
@@ -184,7 +188,7 @@ const finClass=f=>(typeof f==='number'&&f<50)?'low':'';
 /* ===== GitHub ===== */
 const ghOK=()=>GH.owner&&GH.repo&&GH.token;
 const hdr=()=>({Authorization:'Bearer '+GH.token,Accept:'application/vnd.github+json','Content-Type':'application/json'});
-const ghURL=()=>`https://api.github.com/repos/${encodeURIComponent(GH.owner)}/${encodeURIComponent(GH.repo)}/contents/${(GH.path||'data.json').split('/').map(encodeURIComponent).join('/')}`;
+const ghURL=()=>`https://api.github.com/repos/${encodeURIComponent(GH.owner)}/${encodeURIComponent(GH.repo)}/contents/${(GH.path||CFG.path).split('/').map(encodeURIComponent).join('/')}`;
 const b64e=s=>{const b=new TextEncoder().encode(s);let bin='';for(let i=0;i<b.length;i+=0x8000)bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(bin)};
 const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')),c=>c.charCodeAt(0)));
 async function ghFetch(){
@@ -263,7 +267,7 @@ function renderList(){
     const c=counts(s),f=finOf(s,ex);
     const badges=DB.types.filter(t=>c[t.id]).map(t=>`<span class="b" style="--c:${t.color}">${esc(t.short)} ${c[t.id]}</span>`).join('');
     return `<div class="card" data-act="open" data-id="${s.id}"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="muted sm">الصف ${esc(s.grade)} – شعبة ${esc(s.section)}</div>${badges?`<div class="badges">${badges}</div>`:''}</div><div class="fin ${finClass(f)}">${esc(f)}</div></div>`;
-  }).join('')||'<p class="muted center">لا يوجد طلاب بهذا البحث</p>';
+  }).join('')||(DB.students.length?'<p class="muted center">لا يوجد طلاب بهذا البحث</p>':'<div class="box empty"><h3>لا يوجد طلاب بعد</h3><p class="muted">أضف الطلاب من الإعدادات، ويمكنك لصق القائمة كاملة مرة واحدة.</p><button class="btn" data-act="go" data-v="settings">إضافة الطلاب</button></div>');
 }
 
 /* --- ملف الطالب --- */
@@ -274,10 +278,10 @@ function gradeEditor(s,ex){
   const sc=s.scores?.[ex.id]||{},c=calc(sc)||{},st=sc.status||'';
   return `<div class="exam"><div class="row between" style="margin:0"><b>${esc(ex.name)}</b>
   <select data-chg="status" data-ex="${ex.id}"><option value="" ${st===''?'selected':''}>عادي</option><option value="غ" ${st==='غ'?'selected':''}>غائب (غ)</option><option value="نقل" ${st==='نقل'?'selected':''}>نقل</option></select></div>
-  <div class="ggrid">${st===''?inp('daily','اليومي /100',sc.daily,ex.id,100)+inp('theory','النظري /60',sc.theory,ex.id,60)+inp('practical','العملي /40',sc.practical,ex.id,40)+`<div class="gcell"><label>الامتحان /100</label><div class="val">${esc(c.m??'')}</div></div>`
+  <div class="ggrid">${SINGLE&&st!=='غ'?inp('final','الدرجة /100',sc.final,ex.id,100):st===''?inp('daily','اليومي /100',sc.daily,ex.id,100)+inp('theory','النظري /60',sc.theory,ex.id,60)+inp('practical','العملي /40',sc.practical,ex.id,40)+`<div class="gcell"><label>الامتحان /100</label><div class="val">${esc(c.m??'')}</div></div>`
   :st==='نقل'?inp('final','الدرجة النهائية',sc.final,ex.id,100):''}
-  ${st!=='نقل'?`<div class="gcell f"><label>النهائية</label><div class="val">${esc(c.f??'')}</div></div>`:''}</div>
-  ${st===''?`<button class="link sm" data-act="autofill" data-ex="${ex.id}">تعبئة اليومي والعملي تلقائياً من النظري</button>`:''}</div>`;
+  ${st!=='نقل'&&!SINGLE?`<div class="gcell f"><label>النهائية</label><div class="val">${esc(c.f??'')}</div></div>`:''}</div>
+  ${st===''&&!SINGLE?`<button class="link sm" data-act="autofill" data-ex="${ex.id}">تعبئة اليومي والعملي تلقائياً من النظري</button>`:''}</div>`;
 }
 function renderProfile(top){
   const s=stu(curId);if(!s)return closeModal();
@@ -352,6 +356,8 @@ function vReports(){
 }
 function gradesTable(arr,print){
   const sec=S.repSection==='all';
+  if(SINGLE)return `<table class="${print?'pt':'tbl'}"><tr><th>ت</th><th>اسم الطالب</th>${sec?'<th>الشعبة</th>':''}<th>الدرجة (100)</th></tr>
+  ${arr.map((s,i)=>{const f=finOf(s,S.repExam);const low=typeof f==='number'&&f<50;return `<tr${print?'':` data-act="open" data-id="${s.id}" style="cursor:pointer"`}><td>${i+1}</td><td class="l">${esc(s.name)}</td>${sec?`<td>${esc(s.section)}</td>`:''}<td style="${low?'color:#c0392b;':''}font-weight:800">${esc(f)}</td></tr>`}).join('')}</table>`;
   return `<table class="${print?'pt':'tbl'}"><tr><th>ت</th><th>اسم الطالب</th>${sec?'<th>الشعبة</th>':''}<th>اليومي<br>(100)</th><th>النظري<br>(60)</th><th>العملي<br>(40)</th><th>الامتحان<br>(100)</th><th>النهائية<br>(100)</th></tr>
   ${arr.map((s,i)=>{const r=calc(s.scores?.[S.repExam])||{};const low=typeof r.f==='number'&&r.f<50;return `<tr${print?'':` data-act="open" data-id="${s.id}" style="cursor:pointer"`}><td>${i+1}</td><td class="l">${esc(s.name)}</td>${sec?`<td>${esc(s.section)}</td>`:''}<td>${esc(r.d??'')}</td><td>${esc(r.t??'')}</td><td>${esc(r.p??'')}</td><td>${esc(r.m??'')}</td><td style="${low?'color:#c0392b;':''}font-weight:800">${esc(r.f??'')}</td></tr>`}).join('')}</table>`;
 }
@@ -368,8 +374,8 @@ function printStudent(s){
   const c=counts(s);const notes=[...s.notes].sort((a,b)=>a.date.localeCompare(b.date));
   $('#print').innerHTML=printHead('تقرير متابعة طالب')+
   `<table class="pt"><tr><td class="l">اسم الطالب: <b>${esc(s.name)}</b></td><td>الصف ${esc(s.grade)} متوسط – شعبة ${esc(s.section)}</td><td>تاريخ التقرير: ${fmtD(today())}</td></tr></table>
-  <h4>الدرجات</h4><table class="pt"><tr><th>الامتحان</th><th>اليومي (100)</th><th>النظري (60)</th><th>العملي (40)</th><th>الامتحان (100)</th><th>النهائية (100)</th></tr>
-  ${DB.exams.map(ex=>{const r=calc(s.scores?.[ex.id])||{};return `<tr><td class="l">${esc(ex.name)}</td><td>${esc(r.d??'')}</td><td>${esc(r.t??'')}</td><td>${esc(r.p??'')}</td><td>${esc(r.m??'')}</td><td><b>${esc(r.f??'')}</b></td></tr>`}).join('')}</table>
+  <h4>الدرجات</h4>${SINGLE?`<table class="pt"><tr><th>الامتحان</th><th>الدرجة (100)</th></tr>${DB.exams.map(ex=>`<tr><td class="l">${esc(ex.name)}</td><td><b>${esc(finOf(s,ex.id))}</b></td></tr>`).join('')}</table>`:`<table class="pt"><tr><th>الامتحان</th><th>اليومي (100)</th><th>النظري (60)</th><th>العملي (40)</th><th>الامتحان (100)</th><th>النهائية (100)</th></tr>
+  ${DB.exams.map(ex=>{const r=calc(s.scores?.[ex.id])||{};return `<tr><td class="l">${esc(ex.name)}</td><td>${esc(r.d??'')}</td><td>${esc(r.t??'')}</td><td>${esc(r.p??'')}</td><td>${esc(r.m??'')}</td><td><b>${esc(r.f??'')}</b></td></tr>`}).join('')}</table>`}
   <h4>ملخص الملاحظات</h4><table class="pt"><tr>${DB.types.map(t=>`<th>${esc(t.label)}</th>`).join('')}</tr><tr>${DB.types.map(t=>`<td>${c[t.id]||0}</td>`).join('')}</tr></table>
   <h4>تفاصيل الحالات</h4>${notes.length?notesByType(s).map(([t,list])=>`<table class="pt"><tr><th colspan="3" style="text-align:right">${esc(t.label)} — ${list.length} ${list.length===1?'مرة':'مرات'}</th></tr>${list.map((n,i)=>`<tr><td style="width:30px">${i+1}</td><td style="width:150px">${esc(dayName(n.date))} ${fmtD(n.date)}</td><td class="l">${esc(n.text)}</td></tr>`).join('')}</table>`).join(''):'<p>لا توجد ملاحظات.</p>'}
   <div class="sign"><span>توقيع ولي الأمر: ..................</span><span>مدرس المادة: ${esc(DB.settings.teacher)}</span></div>`;
@@ -389,17 +395,20 @@ function vSettings(){
   <section class="box"><h3>الحفظ على GitHub</h3>
    <div class="hint">البيانات تُحفظ في ملف <b>data.json</b> داخل مستودع <b>خاص (Private)</b>، ولا تظهر لأحد. أدخل اسم حسابك واسم المستودع والتوكن مرة واحدة على كل جهاز، وبعدها كل تعديل يُحفظ تلقائياً.</div>
    <label>اسم حساب GitHub</label><input id="gOwner" value="${esc(GH.owner||'')}" dir="ltr" autocapitalize="off">
-   <label>اسم مستودع البيانات (الخاص)</label><input id="gRepo" value="${esc(GH.repo||'students-data')}" dir="ltr" autocapitalize="off">
-   <div class="row"><div class="grow"><label>الفرع</label><input id="gBranch" value="${esc(GH.branch||'main')}" dir="ltr"></div><div class="grow"><label>اسم الملف</label><input id="gPath" value="${esc(GH.path||'data.json')}" dir="ltr"></div></div>
+   <label>اسم مستودع البيانات (الخاص)</label><input id="gRepo" value="${esc(GH.repo||CFG.repo)}" dir="ltr" autocapitalize="off">
+   <div class="row"><div class="grow"><label>الفرع</label><input id="gBranch" value="${esc(GH.branch||'main')}" dir="ltr"></div><div class="grow"><label>اسم الملف</label><input id="gPath" value="${esc(GH.path||CFG.path)}" dir="ltr"></div></div>
    <label>التوكن (Fine-grained token)</label><input id="gToken" type="password" value="${esc(GH.token||'')}" dir="ltr" autocomplete="off">
    <div class="row"><button class="btn" data-act="ghsave">حفظ والاتصال</button>${ghOK()?'<button class="btn ghost" data-act="ghpull">تحديث الآن</button><button class="link danger" data-act="ghforget">إلغاء الربط من هذا الجهاز</button>':''}</div>
   </section>
   ${DB?`
   <section class="box"><h3>إضافة طالب</h3>
    <label>الاسم الكامل</label><input id="aName">
-   <div class="row"><div class="grow"><label>الصف</label><input id="aGrade" list="glist2" value="${esc(gradesList()[0]||'')}"></div><div class="grow"><label>الشعبة</label><input id="aSec" placeholder="أ"></div></div>
+   <div class="row"><div class="grow"><label>الصف</label><input id="aGrade" list="glist2" value="${esc(gradesList()[0]||CFG.grade)}"></div><div class="grow"><label>الشعبة</label><input id="aSec" placeholder="أ"></div></div>
    <datalist id="glist2">${GRADE_ORDER.map(g=>`<option value="${g}">`).join('')}</datalist>
-   <button class="btn" data-act="addstu">إضافة</button></section>
+   <button class="btn" data-act="addstu">إضافة</button>
+   <label style="margin-top:14px">أو أضف عدة طلاب دفعة واحدة (اسم في كل سطر) — يُضافون إلى الصف والشعبة المكتوبين أعلاه</label>
+   <textarea id="aBulk" rows="5" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit" placeholder="علي حسين محمد&#10;أحمد كريم جاسم&#10;..."></textarea>
+   <button class="btn ghost" data-act="addbulk">إضافة القائمة</button></section>
   <section class="box"><h3>الامتحانات</h3>
    ${DB.exams.map(e=>`<div class="row between" style="margin:4px 0"><span>${esc(e.name)}</span>${DB.exams.length>1?`<button class="link danger sm" data-act="delexam" data-v="${e.id}">حذف</button>`:''}</div>`).join('')}
    <div class="row"><input id="exName" class="grow" placeholder="مثلاً: امتحان الشهر الثاني"><button class="btn" data-act="addexam">إضافة امتحان</button></div></section>
@@ -458,7 +467,7 @@ document.addEventListener('click',async e=>{
      persist();el.classList.toggle('on',i<0);
      const arr=filtered(S.regGrade,S.regSection,'');$('#rsum').textContent=`${arr.length} طالب · الغائبون: ${arr.filter(x=>x.notes.some(n=>n.date===S.regDate&&n.type==='absent')).length}`;break}
    case 'ghsave':{
-     GH={owner:$('#gOwner').value.trim().replace(/^@/,''),repo:$('#gRepo').value.trim(),branch:$('#gBranch').value.trim()||'main',path:$('#gPath').value.trim()||'data.json',token:$('#gToken').value.trim()};
+     GH={owner:$('#gOwner').value.trim().replace(/^@/,''),repo:$('#gRepo').value.trim(),branch:$('#gBranch').value.trim()||'main',path:$('#gPath').value.trim()||CFG.path,token:$('#gToken').value.trim()};
      if(!ghOK()){toast('أكمل اسم الحساب والمستودع والتوكن');break}
      localStorage.setItem(LSG,JSON.stringify(GH));
      try{setSync('pending');const r=await ghFetch();
@@ -475,6 +484,14 @@ document.addEventListener('click',async e=>{
      const dup=DB.students.find(x=>norm(x.name)===norm(n));
      if(dup&&!confirm(`الاسم موجود مسبقاً في الصف ${dup.grade} شعبة ${dup.section}. إضافة على أي حال؟`))break;
      DB.students.push({id:uid(),name:n,grade:g,section:sec,scores:{},notes:[]});persist();toast('تمت إضافة '+n);vSettings();break}
+   case 'addbulk':{
+     const g=$('#aGrade').value.trim(),sec=$('#aSec').value.trim();
+     const names=$('#aBulk').value.split(/\n/).map(x=>x.replace(/^[\d\s.\-–—)]+/,'').trim()).filter(Boolean);
+     if(!names.length||!g||!sec){toast('اكتب الأسماء والصف والشعبة');break}
+     const dups=names.filter(n=>DB.students.some(x=>norm(x.name)===norm(n)));
+     if(dups.length&&!confirm('هذه الأسماء موجودة مسبقاً:\n'+dups.join('\n')+'\n\nإضافة الباقي فقط؟'))break;
+     let k=0;names.forEach(n=>{if(!DB.students.some(x=>norm(x.name)===norm(n))){DB.students.push({id:uid(),name:n,grade:g,section:sec,scores:{},notes:[]});k++}});
+     persist();toast('تمت إضافة '+k+' طالب');vSettings();break}
    case 'addexam':{const n=$('#exName').value.trim();if(!n)break;DB.exams.push({id:'e'+uid(),name:n});persist();vSettings();toast('تمت إضافة الامتحان');break}
    case 'delexam':if(confirm('حذف هذا الامتحان ودرجاته من كل الطلاب؟')){DB.exams=DB.exams.filter(x=>x.id!==v);DB.students.forEach(x=>delete x.scores[v]);persist();vSettings()}break;
    case 'addtype':{
@@ -508,7 +525,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&curId)closeModal()}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ghOK()&&!saveTimer)ghSync(true)});
 
 /* ===== تشغيل ===== */
-load();render();ghSync(true);
+$('#apptitle').textContent=CFG.title;
+load();if(!DB&&SINGLE){DB=ensure({students:[]});localStorage.setItem(LS,JSON.stringify(DB))}render();ghSync(true);
 /* تحديث تلقائي: إذا نُشرت نسخة أحدث من الصفحة يعاد تحميلها */
 async function checkUpdate(){try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/APP_VERSION='([^']+)'/);if(m&&m[1]!==APP_VERSION&&!curId){toast('يوجد تحديث… جاري التحميل');setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1])),800)}}catch(e){}}
 checkUpdate();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate()});
